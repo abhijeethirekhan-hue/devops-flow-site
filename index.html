@@ -1,13 +1,441 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>React App with AWS Deployment</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevPulse - Developer Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+            background: #1a1a2e;
+            transition: background 0.5s;
+        }
+
+        body.light { background: #f0f0f0; }
+
+        /* Animated gradient background */
+        .bg-gradient { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.6; pointer-events: none; }
+        .gradient-1, .gradient-2, .gradient-3 { position: absolute; width: 200%; height: 200%; border-radius: 50%; filter: blur(80px); }
+        .gradient-1 { background: radial-gradient(circle, #ff6b9d 0%, transparent 70%); animation: drift1 20s ease-in-out infinite; }
+        .gradient-2 { background: radial-gradient(circle, #4ecdc4 0%, transparent 70%); animation: drift2 25s ease-in-out infinite; }
+        .gradient-3 { background: radial-gradient(circle, #ffa07a 0%, transparent 70%); animation: drift3 30s ease-in-out infinite; }
+        @keyframes drift1 { 0%, 100% { transform: translate(-10%, -10%); } 50% { transform: translate(-30%, -20%); } }
+        @keyframes drift2 { 0%, 100% { transform: translate(-60%, -40%); } 50% { transform: translate(-40%, -60%); } }
+        @keyframes drift3 { 0%, 100% { transform: translate(-40%, -50%); } 50% { transform: translate(-20%, -30%); } }
+
+        #cursor-glow { position: fixed; width: 600px; height: 600px; border-radius: 50%; pointer-events: none; z-index: 2; opacity: 0.15; background: radial-gradient(circle, white 0%, transparent 70%); transform: translate(-50%, -50%); transition: opacity 0.3s; }
+        body.light #cursor-glow { opacity: 0.08; }
+        #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+
+        /* Main layout */
+        .dashboard { position: relative; z-index: 4; padding: 2rem 1rem; max-width: 1400px; margin: 0 auto; }
+
+        /* Top bar */
+        .top-bar { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; justify-content: space-between; }
+        .top-card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); padding: 1rem 1.5rem; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.18); color: white; }
+        body.light .top-card { background: rgba(255, 255, 255, 0.6); color: #2d2d2d; border: 1px solid rgba(0, 0, 0, 0.1); }
+        .top-card h3 { font-size: 0.9rem; opacity: 0.7; margin-bottom: 0.3rem; }
+        .top-card .value { font-size: 1.4rem; font-weight: bold; }
+        .crypto-prices { display: flex; gap: 1rem; }
+        .crypto-item { display: flex; align-items: center; gap: 0.5rem; }
+        .arrow { font-size: 1rem; }
+        .arrow.up { color: #4ade80; }
+        .arrow.down { color: #ef4444; }
+        .weather-input { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.4rem 0.8rem; border-radius: 8px; width: 120px; font-size: 0.85rem; margin-top: 0.3rem; }
+        body.light .weather-input { background: rgba(0, 0, 0, 0.05); border: 1px solid rgba(0, 0, 0, 0.2); color: #2d2d2d; }
+
+        /* Grid layout */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+
+        /* Card styles */
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 40px var(--accent-glow);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: white;
+            transition: all 0.3s;
+            --accent-glow: rgba(255, 107, 157, 0.3);
+        }
+
+        body.light .card { background: rgba(255, 255, 255, 0.6); color: #2d2d2d; border: 1px solid rgba(0, 0, 0, 0.1); }
+
+        .card h2 { font-size: 1.3rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .card input { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 0.5rem; border-radius: 8px; width: 100%; margin-bottom: 0.8rem; }
+        body.light .card input { background: rgba(0, 0, 0, 0.05); border: 1px solid rgba(0, 0, 0, 0.2); color: #2d2d2d; }
+        .card button { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3); padding: 0.6rem 1rem; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+        .card button:hover { background: rgba(255, 255, 255, 0.3); }
+        body.light .card button { background: rgba(0, 0, 0, 0.08); color: #2d2d2d; border: 1px solid rgba(0, 0, 0, 0.15); }
+
+        /* Center hero card */
+        .hero-card { grid-column: 1 / -1; text-align: center; padding: 2.5rem; animation: pulse-glow 3s ease-in-out infinite; perspective: 1000px; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 40px var(--accent-glow); } 50% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 80px var(--accent-glow); } }
+        .hero-card h1 { font-size: 2rem; margin-bottom: 1rem; min-height: 60px; text-shadow: 2px 2px 8px rgba(0,0,0,0.3); }
+        .hero-card .clock { font-size: 1.5rem; opacity: 0.9; font-variant-numeric: tabular-nums; }
+
+        /* Status dots */
+        .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 4px; }
+        .status-dot.success { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+        .status-dot.error { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        /* GitHub stats */
+        .github-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; margin: 1rem 0; }
+        .stat-box { background: rgba(255, 255, 255, 0.1); padding: 0.8rem; border-radius: 10px; text-align: center; }
+        .stat-box .num { font-size: 1.8rem; font-weight: bold; }
+        .stat-box .label { font-size: 0.8rem; opacity: 0.7; }
+        .event-item { padding: 0.6rem; background: rgba(255, 255, 255, 0.08); border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.9rem; }
+
+        /* HN stories */
+        .story-item { padding: 0.8rem; background: rgba(255, 255, 255, 0.08); border-radius: 8px; margin-bottom: 0.5rem; }
+        .story-item a { color: #4ecdc4; text-decoration: none; font-weight: 500; }
+        .story-item a:hover { text-decoration: underline; }
+        body.light .story-item a { color: #2d7a74; }
+
+        /* Focus timer */
+        .timer-display { font-size: 3rem; font-weight: bold; text-align: center; margin: 1.5rem 0; font-variant-numeric: tabular-nums; }
+        .timer-controls { display: flex; gap: 0.8rem; justify-content: center; }
+
+        /* Streak heatmap */
+        .heatmap { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-top: 1rem; }
+        .heatmap-cell { aspect-ratio: 1; background: rgba(255, 255, 255, 0.1); border-radius: 4px; transition: background 0.2s; }
+        .heatmap-cell.active { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+
+        /* Toolbar */
+        .toolbar { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; gap: 0.5rem; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); padding: 0.8rem 1rem; border-radius: 50px; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .toolbar button { background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.25); padding: 0.6rem 1rem; border-radius: 50px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; font-weight: 500; }
+        .toolbar button:hover { background: rgba(255, 255, 255, 0.25); transform: translateY(-2px); }
+        body.light .toolbar { background: rgba(255, 255, 255, 0.6); }
+        body.light .toolbar button { color: #2d2d2d; background: rgba(0, 0, 0, 0.05); border: 1px solid rgba(0, 0, 0, 0.1); }
+
+        .confetti { position: fixed; width: 10px; height: 10px; z-index: 200; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"><div class="gradient-1"></div><div class="gradient-2"></div><div class="gradient-3"></div></div>
+    <div id="cursor-glow"></div>
+    <canvas id="particles"></canvas>
+
+    <div class="dashboard">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="top-card">
+                <h3>IST Time</h3>
+                <div class="value" id="ist-clock">--:--:--</div>
+            </div>
+            <div class="top-card">
+                <h3>Crypto (INR) <span class="status-dot" id="crypto-status"></span></h3>
+                <div class="crypto-prices">
+                    <div class="crypto-item">₿ <span id="btc-inr">--</span> <span class="arrow" id="btc-arrow"></span></div>
+                    <div class="crypto-item">Ξ <span id="eth-inr">--</span> <span class="arrow" id="eth-arrow"></span></div>
+                    <div class="crypto-item">◎ <span id="sol-inr">--</span> <span class="arrow" id="sol-arrow"></span></div>
+                </div>
+            </div>
+            <div class="top-card">
+                <h3>USD → INR <span class="status-dot" id="forex-status"></span></h3>
+                <div class="value" id="usd-inr">--</div>
+            </div>
+            <div class="top-card">
+                <h3>Weather <span class="status-dot" id="weather-status"></span></h3>
+                <div class="value" id="weather-temp">--°C</div>
+                <input type="text" class="weather-input" id="city-input" placeholder="Mumbai" onkeypress="if(event.key==='Enter')fetchWeather()">
+            </div>
+        </div>
+
+        <!-- Hero Card -->
+        <div class="grid">
+            <div class="card hero-card" id="hero-card">
+                <h1 id="title"></h1>
+                <div class="clock" id="local-clock">00:00:00</div>
+            </div>
+
+            <!-- GitHub Card -->
+            <div class="card">
+                <h2>GitHub <span class="status-dot" id="github-status"></span></h2>
+                <input type="text" id="github-username" placeholder="Enter username" onkeypress="if(event.key==='Enter')fetchGitHub()">
+                <div class="github-stats">
+                    <div class="stat-box"><div class="num" id="gh-followers">--</div><div class="label">Followers</div></div>
+                    <div class="stat-box"><div class="num" id="gh-repos">--</div><div class="label">Repos</div></div>
+                    <div class="stat-box"><div class="num" id="gh-stars">--</div><div class="label">Stars</div></div>
+                </div>
+                <div id="gh-events"></div>
+            </div>
+
+            <!-- Hacker News Card -->
+            <div class="card" id="hn-card">
+                <h2>Hacker News <span class="status-dot" id="hn-status"></span> <button onclick="fetchHN()" style="float: right; padding: 0.4rem 0.8rem;">🔄</button></h2>
+                <div id="hn-stories"></div>
+            </div>
+
+            <!-- Quote Card -->
+            <div class="card">
+                <h2>Quote <span class="status-dot" id="quote-status"></span> <button onclick="fetchQuote()" style="float: right; padding: 0.4rem 0.8rem;">🔄</button></h2>
+                <div id="quote-text" style="font-style: italic; margin-top: 1rem; line-height: 1.6;">Loading wisdom...</div>
+            </div>
+
+            <!-- Focus Timer -->
+            <div class="card">
+                <h2>🍅 Focus Timer</h2>
+                <div class="timer-display" id="timer-display">25:00</div>
+                <div class="timer-controls">
+                    <button onclick="startTimer()">▶️ Start</button>
+                    <button onclick="pauseTimer()">⏸️ Pause</button>
+                    <button onclick="resetTimer()">🔄 Reset</button>
+                </div>
+            </div>
+
+            <!-- Streak Tracker -->
+            <div class="card">
+                <h2>📊 Coding Streak</h2>
+                <button onclick="markCodingDay()" style="width: 100%; margin-bottom: 1rem;">✅ Did I code today?</button>
+                <div class="heatmap" id="heatmap"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <button onclick="fireConfetti()">🎉</button>
+        <button onclick="toggleTheme()">🌙</button>
+        <button onclick="toggleFullscreen()">⛶</button>
+        <button onclick="cycleAccent()">🎨</button>
+        <button title="Keyboard: F=Focus, H=HN, C=Confetti, D=Dark">⌨️</button>
+    </div>
+
+    <script>
+        // Config & State
+        const phrases = ["Hello from Claude Code", "DevPulse", "Built with OmniRoute", "Zero dependencies"];
+        const accents = ["rgba(255, 107, 157, 0.3)", "rgba(78, 205, 196, 0.3)", "rgba(255, 160, 122, 0.3)", "rgba(155, 89, 182, 0.3)", "rgba(52, 211, 153, 0.3)", "rgba(251, 191, 36, 0.3)"];
+        const fallbackQuotes = ["Code is poetry written in logic.", "Every expert was once a beginner.", "Make it work, make it right, make it fast."];
+        let accentIndex = 0, phraseIndex = 0, typing = true, charIndex = 0, timerInterval = null, timerSeconds = 1500, timerRunning = false;
+
+        // Cache helper
+        function getCached(key) { const cached = sessionStorage.getItem(key); if (!cached) return null; const {data, ts} = JSON.parse(cached); if (Date.now() - ts > 60000) { sessionStorage.removeItem(key); return null; } return data; }
+        function setCache(key, data) { sessionStorage.setItem(key, JSON.stringify({data, ts: Date.now()})); }
+        function setStatus(id, ok) { const el = document.getElementById(id); if (el) el.className = `status-dot ${ok ? 'success' : 'error'}`; }
+
+        // Typewriter
+        function typeLoop() {
+            const title = document.getElementById('title'), current = phrases[phraseIndex];
+            if (typing) { title.textContent = current.substring(0, charIndex++); if (charIndex > current.length) setTimeout(() => typing = false, 2000); }
+            else { title.textContent = current.substring(0, charIndex--); if (charIndex === 0) { typing = true; phraseIndex = (phraseIndex + 1) % phrases.length; } }
+            setTimeout(typeLoop, typing ? 100 : 50);
+        }
+        typeLoop();
+
+        // Clocks
+        function updateClocks() {
+            const now = new Date();
+            document.getElementById('local-clock').textContent = now.toLocaleTimeString('en-GB');
+            const ist = new Date(now.toLocaleString('en-US', {timeZone: 'Asia/Kolkata'}));
+            document.getElementById('ist-clock').textContent = ist.toLocaleTimeString('en-GB');
+        }
+        setInterval(updateClocks, 1000);
+        updateClocks();
+
+        // Crypto prices in INR
+        async function fetchCrypto() {
+            try {
+                const cached = getCached('crypto');
+                if (cached) { updateCrypto(cached); return; }
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=inr&include_24hr_change=true');
+                const data = await res.json();
+                setCache('crypto', data);
+                updateCrypto(data);
+                setStatus('crypto-status', true);
+            } catch { setStatus('crypto-status', false); }
+        }
+        function updateCrypto(data) {
+            document.getElementById('btc-inr').textContent = '₹' + Math.round(data.bitcoin.inr).toLocaleString();
+            document.getElementById('eth-inr').textContent = '₹' + Math.round(data.ethereum.inr).toLocaleString();
+            document.getElementById('sol-inr').textContent = '₹' + Math.round(data.solana.inr).toLocaleString();
+            document.getElementById('btc-arrow').textContent = data.bitcoin.inr_24h_change > 0 ? '▲' : '▼';
+            document.getElementById('btc-arrow').className = data.bitcoin.inr_24h_change > 0 ? 'arrow up' : 'arrow down';
+            document.getElementById('eth-arrow').textContent = data.ethereum.inr_24h_change > 0 ? '▲' : '▼';
+            document.getElementById('eth-arrow').className = data.ethereum.inr_24h_change > 0 ? 'arrow up' : 'arrow down';
+            document.getElementById('sol-arrow').textContent = data.solana.inr_24h_change > 0 ? '▲' : '▼';
+            document.getElementById('sol-arrow').className = data.solana.inr_24h_change > 0 ? 'arrow up' : 'arrow down';
+        }
+        fetchCrypto();
+        setInterval(fetchCrypto, 60000);
+
+        // USD to INR (via BTC as proxy)
+        async function fetchForex() {
+            try {
+                const cached = getCached('forex');
+                if (cached) { document.getElementById('usd-inr').textContent = '₹' + cached; setStatus('forex-status', true); return; }
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=inr');
+                const data = await res.json();
+                const rate = data.tether.inr.toFixed(2);
+                setCache('forex', rate);
+                document.getElementById('usd-inr').textContent = '₹' + rate;
+                setStatus('forex-status', true);
+            } catch { setStatus('forex-status', false); }
+        }
+        fetchForex();
+        setInterval(fetchForex, 60000);
+
+        // Weather
+        async function fetchWeather() {
+            const city = document.getElementById('city-input').value || localStorage.getItem('weatherCity') || 'Mumbai';
+            localStorage.setItem('weatherCity', city);
+            try {
+                const cached = getCached(`weather_${city}`);
+                if (cached) { document.getElementById('weather-temp').textContent = cached + '°C'; setStatus('weather-status', true); return; }
+                const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`);
+                const geoData = await geoRes.json();
+                if (!geoData[0]) throw new Error('City not found');
+                const {lat, lon} = geoData[0];
+                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                const weatherData = await weatherRes.json();
+                const temp = Math.round(weatherData.current_weather.temperature);
+                setCache(`weather_${city}`, temp);
+                document.getElementById('weather-temp').textContent = temp + '°C';
+                setStatus('weather-status', true);
+            } catch { setStatus('weather-status', false); }
+        }
+        document.getElementById('city-input').value = localStorage.getItem('weatherCity') || 'Mumbai';
+        fetchWeather();
+
+        // GitHub
+        async function fetchGitHub() {
+            const username = document.getElementById('github-username').value || localStorage.getItem('githubUsername');
+            if (!username) return;
+            localStorage.setItem('githubUsername', username);
+            try {
+                const cached = getCached(`github_${username}`);
+                if (cached) { updateGitHub(cached); return; }
+                const userRes = await fetch(`https://api.github.com/users/${username}`);
+                const user = await userRes.json();
+                const reposRes = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`);
+                const repos = await reposRes.json();
+                const stars = repos.reduce((sum, r) => sum + r.stargazers_count, 0);
+                const eventsRes = await fetch(`https://api.github.com/users/${username}/events/public?per_page=5`);
+                const events = await eventsRes.json();
+                const data = {followers: user.followers, repos: user.public_repos, stars, events: events.slice(0, 5).map(e => e.type)};
+                setCache(`github_${username}`, data);
+                updateGitHub(data);
+                setStatus('github-status', true);
+            } catch { setStatus('github-status', false); }
+        }
+        function updateGitHub(data) {
+            document.getElementById('gh-followers').textContent = data.followers;
+            document.getElementById('gh-repos').textContent = data.repos;
+            document.getElementById('gh-stars').textContent = data.stars;
+            document.getElementById('gh-events').innerHTML = data.events.map(e => `<div class="event-item">${e}</div>`).join('');
+        }
+        const savedGH = localStorage.getItem('githubUsername');
+        if (savedGH) { document.getElementById('github-username').value = savedGH; fetchGitHub(); }
+
+        // Hacker News
+        async function fetchHN() {
+            try {
+                const cached = getCached('hn');
+                if (cached) { updateHN(cached); return; }
+                const res = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+                const ids = await res.json();
+                const stories = await Promise.all(ids.slice(0, 5).map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())));
+                setCache('hn', stories);
+                updateHN(stories);
+                setStatus('hn-status', true);
+            } catch { setStatus('hn-status', false); }
+        }
+        function updateHN(stories) {
+            document.getElementById('hn-stories').innerHTML = stories.map(s => `<div class="story-item"><a href="${s.url || 'https://news.ycombinator.com/item?id=' + s.id}" target="_blank">${s.title}</a></div>`).join('');
+        }
+        fetchHN();
+
+        // Quote
+        async function fetchQuote() {
+            try {
+                const cached = getCached('quote');
+                if (cached) { document.getElementById('quote-text').innerHTML = `"${cached.q}" <br><small>— ${cached.a}</small>`; setStatus('quote-status', true); return; }
+                const res = await fetch('https://zenquotes.io/api/random');
+                const data = await res.json();
+                setCache('quote', data[0]);
+                document.getElementById('quote-text').innerHTML = `"${data[0].q}" <br><small>— ${data[0].a}</small>`;
+                setStatus('quote-status', true);
+            } catch { document.getElementById('quote-text').textContent = `"${fallbackQuotes[Math.floor(Math.random() * fallbackQuotes.length)]}"`; setStatus('quote-status', false); }
+        }
+        fetchQuote();
+
+        // Focus Timer
+        function startTimer() { if (!timerRunning) { timerRunning = true; timerInterval = setInterval(() => { if (timerSeconds > 0) { timerSeconds--; updateTimerDisplay(); } else { beep(); resetTimer(); } }, 1000); } }
+        function pauseTimer() { timerRunning = false; clearInterval(timerInterval); }
+        function resetTimer() { pauseTimer(); timerSeconds = 1500; updateTimerDisplay(); }
+        function updateTimerDisplay() { const m = Math.floor(timerSeconds / 60), s = timerSeconds % 60; document.getElementById('timer-display').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; }
+        function beep() { const ctx = new (window.AudioContext || window.webkitAudioContext)(), osc = ctx.createOscillator(); osc.frequency.value = 800; osc.connect(ctx.destination); osc.start(); setTimeout(() => osc.stop(), 200); }
+
+        // Streak Tracker
+        function markCodingDay() { const dates = JSON.parse(localStorage.getItem('codingDates') || '[]'); const today = new Date().toISOString().split('T')[0]; if (!dates.includes(today)) { dates.push(today); localStorage.setItem('codingDates', JSON.stringify(dates)); } renderHeatmap(); }
+        function renderHeatmap() {
+            const dates = JSON.parse(localStorage.getItem('codingDates') || '[]');
+            const heatmap = document.getElementById('heatmap');
+            heatmap.innerHTML = '';
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell' + (dates.includes(dateStr) ? ' active' : '');
+                cell.title = dateStr;
+                heatmap.appendChild(cell);
+            }
+        }
+        renderHeatmap();
+
+        // Confetti
+        function fireConfetti() { for (let i = 0; i < 60; i++) setTimeout(() => { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = '50%'; c.style.top = '50%'; c.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`; document.body.appendChild(c); animateConfetti(c); }, i * 15); }
+        function animateConfetti(el) { const vx = (Math.random() - 0.5) * 10, vy = Math.random() * -8 - 5; let x = window.innerWidth / 2, y = window.innerHeight / 2, r = 0, v = vy, o = 1; function fall() { v += 0.2; x += vx; y += v; r += 10; o -= 0.01; el.style.transform = `translate(${x}px, ${y}px) rotate(${r}deg)`; el.style.opacity = o; if (y < window.innerHeight && o > 0) requestAnimationFrame(fall); else el.remove(); } fall(); }
+
+        // Toolbar
+        function cycleAccent() { accentIndex = (accentIndex + 1) % accents.length; document.querySelectorAll('.card, .hero-card').forEach(c => c.style.setProperty('--accent-glow', accents[accentIndex])); }
+        function toggleFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+        function toggleTheme() { document.body.classList.toggle('light'); const isLight = document.body.classList.contains('light'); document.querySelector('.toolbar button:nth-child(2)').textContent = isLight ? '🌙' : '☀️'; localStorage.setItem('theme', isLight ? 'light' : 'dark'); }
+        if (localStorage.getItem('theme') === 'light') toggleTheme();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.key === 'f' || e.key === 'F') document.getElementById('timer-display').scrollIntoView({behavior: 'smooth'});
+            if (e.key === 'h' || e.key === 'H') document.getElementById('hn-card').scrollIntoView({behavior: 'smooth'});
+            if (e.key === 'c' || e.key === 'C') fireConfetti();
+            if (e.key === 'd' || e.key === 'D') toggleTheme();
+        });
+
+        // Mouse glow
+        document.addEventListener('mousemove', e => { document.getElementById('cursor-glow').style.left = e.clientX + 'px'; document.getElementById('cursor-glow').style.top = e.clientY + 'px'; });
+
+        // 3D tilt on hero card
+        document.getElementById('hero-card').addEventListener('mousemove', e => { const rect = e.currentTarget.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width - 0.5, y = (e.clientY - rect.top) / rect.height - 0.5; e.currentTarget.style.transform = `rotateY(${x * 10}deg) rotateX(${-y * 10}deg)`; });
+        document.getElementById('hero-card').addEventListener('mouseleave', e => { e.currentTarget.style.transform = 'rotateY(0) rotateX(0)'; });
+
+        // Particles
+        const canvas = document.getElementById('particles'), ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const particles = Array.from({length: 60}, () => ({x: Math.random() * canvas.width, y: Math.random() * canvas.height, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, radius: Math.random() * 2 + 1}));
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const isLight = document.body.classList.contains('light');
+            ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.5)';
+            ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)';
+            particles.forEach((p, i) => {
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+                particles.slice(i + 1).forEach(p2 => { const dx = p2.x - p.x, dy = p2.y - p.y, dist = Math.sqrt(dx * dx + dy * dy); if (dist < 120) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); } });
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+            });
+            requestAnimationFrame(drawParticles);
+        }
+        drawParticles();
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+    </script>
+</body>
 </html>
